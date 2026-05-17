@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Justificativa de Ausência - CCB</title>
+    <!-- Firebase SDK (mesmo projeto do Farol de Presença) -->
+    <script type="module" id="firebaseModule">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyALIicdTDLfB6eLii-iSVCzAY4xtwaJ-m0",
+        authDomain: "farol-regional.firebaseapp.com",
+        projectId: "farol-regional",
+        storageBucket: "farol-regional.firebasestorage.app",
+        messagingSenderId: "739405319054",
+        appId: "1:739405319054:web:69db20bd2a4bd14fb972df"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window._jfb = {
+        async carregarReuniaoAtiva() {
+            const s = await getDoc(doc(db, "sistema", "reuniao_ativa"));
+            return s.exists() ? s.data() : null;
+        },
+        async carregarCadastro() {
+            const s = await getDoc(doc(db, "sistema", "dados_principais"));
+            return s.exists() ? (s.data().cadastroPessoas || []) : [];
+        },
+        async salvarJustificativa(just) {
+            const id = 'just_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            await setDoc(doc(db, "justificativas", id), { ...just, id, timestamp: new Date().toISOString() });
+            return id;
+        },
+        async verificarDuplicata(nome, monthYear, tipo) {
+            const s = await getDocs(collection(db, "justificativas"));
+            return s.docs.some(d => {
+                const data = d.data();
+                return data.nome.toLowerCase().trim() === nome.toLowerCase().trim() &&
+                       data.monthYear === monthYear &&
+                       data.tipo === tipo;
+            });
+        }
+    };
+
+    window._jfbReady = true;
+    document.dispatchEvent(new Event("jfbReady"));
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(145deg, #1a2a3a 0%, #1e3a5f 40%, #16304a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 30px 16px 60px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+            width: 100%;
+            max-width: 560px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 60%, #1a3a4a 100%);
+            padding: 28px 32px 22px;
+            color: white;
+            position: relative;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 20% 50%, rgba(52,152,219,0.18) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.13);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 {
+            font-size: 19px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: rgba(255,255,255,0.65);
+            margin-top: 3px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 7px 12px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.75);
+            position: relative;
+            width: fit-content;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #aaa;
+            flex-shrink: 0;
+        }
+
+        .card-body {
+            padding: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 7px;
+            letter-spacing: 0.2px;
+        }
+
+        .form-group label span.obr {
+            color: #e74c3c;
+            margin-left: 2px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #dde3ec;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #2c3e50;
+            background: #fafbfc;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
+            background: white;
+        }
+
+        .form-group input[readonly] {
+            background: #f0f4f8;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Autocomplete */
+        .autocomplete-wrap {
+            position: relative;
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            background: white;
+            border: 1.5px solid #3498db;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            z-index: 100;
+            max-height: 220px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .autocomplete-list.open { display: block; }
+
+        .autocomplete-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.15s;
+        }
+
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover, .autocomplete-item.selected { background: #eaf4fd; }
+
+        .autocomplete-item .nome { font-weight: 600; color: #2c3e50; }
+        .autocomplete-item .cargo { font-size: 11px; color: #888; margin-top: 1px; }
+
+        /* Motivo radio boxes */
+        .motivo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .motivo-item {
+            position: relative;
+        }
+
+        .motivo-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .motivo-item label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1.5px solid #dde3ec;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            background: #fafbfc;
+            transition: all 0.2s;
+            margin: 0;
+        }
+
+        .motivo-item label .motivo-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .motivo-item input[type="radio"]:checked + label {
+            border-color: #3498db;
+            background: #eaf4fd;
+            color: #2c3e50;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+        }
+
+        .motivo-item label:hover {
+            border-color: #3498db;
+            background: #f5faff;
+        }
+
+        /* Reunião selector */
+        .reuniao-grid {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .reuniao-item {
+            position: relative;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .reuniao-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0; height: 0;
+        }
+
+        .reuniao-item label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 14px;
+            border: 1.5px solid #dde3ec;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+            background: #fafbfc;
+            transition: all 0.2s;
+            text-align: center;
+            margin: 0;
+        }
+
+        .reuniao-item label .reuniao-sigla {
+            font-size: 16px;
+            font-weight: 800;
+            color: #2c3e50;
+        }
+
+        .reuniao-item label .reuniao-desc {
+            font-size: 10px;
+            color: #888;
+            font-weight: 400;
+        }
+
+        .reuniao-item input[type="radio"]:checked + label {
+            border-color: #3498db;
+            background: #eaf4fd;
+            color: #2c3e50;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+        }
+
+        .reuniao-item input[type="radio"]:checked + label .reuniao-sigla { color: #3498db; }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.3px;
+            margin-top: 6px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2980b9, #1a6fa0);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(52,152,219,0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .alert.success {
+            background: #eafaf1;
+            border: 1px solid #a9dfbf;
+            color: #1e8449;
+            display: block;
+        }
+
+        .alert.error {
+            background: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            color: #c0392b;
+            display: block;
+        }
+
+        .alert.warning {
+            background: #fffbf0;
+            border: 1px solid #ffe0a0;
+            color: #856404;
+            display: block;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #eef0f3;
+            margin: 24px 0;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .mes-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Success screen */
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 20px 0 10px;
+        }
+
+        .success-screen .check-icon {
+            font-size: 60px;
+            margin-bottom: 16px;
+        }
+
+        .success-screen h2 {
+            font-size: 22px;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .success-screen p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+
+        .btn-nova {
+            margin-top: 24px;
+            padding: 11px 28px;
+            background: #f0f4f8;
+            color: #2c3e50;
+            border: 1.5px solid #dde3ec;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-nova:hover { background: #e0e8f0; }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        footer {
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            margin-top: 24px;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .card-body { padding: 22px 18px; }
+            .motivo-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div style="width:100%; max-width:560px;">
+
+    <div class="card">
+        <div class="card-header">
+            <div class="brand">
+                <div class="brand-icon">📝</div>
+                <div class="brand-text">
+                    <h1>Justificativa de Ausência</h1>
+                    <p>Reuniões de Caieiras</p>
+                </div>
+            </div>
+            <div id="statusBar" style="display:none;">
+                <div id="statusDot"></div>
+                <span id="statusTxt"></span>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <!-- TELA DE SUCESSO -->
+            <div class="success-screen" id="successScreen">
+                <div class="check-icon">✅</div>
+                <h2>Justificativa Enviada!</h2>
+                <p id="successMsg">Sua justificativa foi registrada com sucesso.</p>
+                <p style="font-size:12px; color:#aaa; margin-top:8px;">O responsável será notificado e sua ausência ficará marcada como justificada no Farol de Presença.</p>
+            </div>
+
+            <!-- FORMULÁRIO -->
+            <div id="formSection">
+
+                <p class="section-title">Dados da Pessoa</p>
+
+                <div class="form-group">
+                    <label>Nome Completo <span class="obr">*</span></label>
+                    <div class="autocomplete-wrap">
+                        <input type="text" id="inputNome" placeholder="Digite seu nome..." autocomplete="off"
+                            oninput="onNomeInput()" onkeydown="onNomeKeydown(event)">
+                        <div class="autocomplete-list" id="autocompleteList"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Cargo / Ministério</label>
+                    <input type="text" id="inputCargo" readonly placeholder="Preenchido automaticamente...">
+                </div>
+
+                <hr class="divider">
+                <p class="section-title">Dados da Ausência</p>
+
+                <div class="form-group">
+                    <label>Reunião <span class="obr">*</span></label>
+                    <!-- Badge da reunião ativa — preenchido automaticamente via Firebase -->
+                    <div id="reuniaoAtivaBadge" style="
+                        display:flex; align-items:center; gap:14px;
+                        padding:14px 16px;
+                        border-radius:10px;
+                        background:#f4f8ff;
+                        border:1.5px solid #d0e4f7;
+                    ">
+                        <div id="reuniaoLoadingDot" style="
+                            width:10px; height:10px; border:2px solid #ecf0f1;
+                            border-top-color:#3498db; border-radius:50%;
+                            animation:spin 0.8s linear infinite; flex-shrink:0;
+                        "></div>
+                        <div style="flex:1;">
+                            <div style="font-size:11px; color:#7f8c8d; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Reunião ativa</div>
+                            <div id="reuniaoAtivaTexto" style="font-size:15px; font-weight:700; color:#2c3e50;">Carregando...</div>
+                            <div id="reuniaoAtivaDesc" style="font-size:12px; color:#7f8c8d; margin-top:2px;"></div>
+                        </div>
+                        <span id="reuniaoAtivaTipoBadge" style="display:none; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:800;"></span>
+                    </div>
+                    <div id="reuniaoSemAtiva" style="display:none; padding:14px 16px; border-radius:10px; background:#fdf2f2; border:1.5px solid #f5c6cb; color:#c0392b; font-size:13px; font-weight:600;">
+                        ⚠️ Nenhuma reunião ativa no momento. Aguarde o responsável ativar uma reunião.
+                    </div>
+                    <!-- Campo oculto que guarda o tipo selecionado -->
+                    <input type="hidden" id="reuniaoAtivaValor" value="">
+                </div>
+
+                <div class="form-group">
+                    <label>Mês / Ano da Ausência <span class="obr">*</span></label>
+                    <input type="text" id="inputMes" readonly placeholder="Preenchido automaticamente pela reunião ativa..."
+                        style="background:#f0f4f8; color:#555; cursor:not-allowed;">
+                    <p class="mes-info" id="mesInfo"></p>
+                </div>
+
+                <hr class="divider">
+                <p class="section-title">Motivo da Ausência</p>
+
+                <div class="form-group">
+                    <div class="motivo-grid">
+                        <div class="motivo-item">
+                            <input type="radio" name="motivo" id="mViagem" value="Viagem">
+                            <label for="mViagem">
+                                <span class="motivo-icon">✈️</span>
+                                Viagem
+                            </label>
+                        </div>
+                        <div class="motivo-item">
+                            <input type="radio" name="motivo" id="mTrabalho" value="Trabalho">
+                            <label for="mTrabalho">
+                                <span class="motivo-icon">💼</span>
+                                Trabalho
+                            </label>
+                        </div>
+                        <div class="motivo-item">
+                            <input type="radio" name="motivo" id="mEnfermidade" value="Enfermidade">
+                            <label for="mEnfermidade">
+                                <span class="motivo-icon">🏥</span>
+                                Enfermidade
+                            </label>
+                        </div>
+                        <div class="motivo-item">
+                            <input type="radio" name="motivo" id="mOutros" value="Outros">
+                            <label for="mOutros">
+                                <span class="motivo-icon">📋</span>
+                                Outros
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="obsGroup">
+                    <label>Observação <span style="font-weight:400; color:#aaa;">(opcional)</span></label>
+                    <textarea id="inputObs" placeholder="Detalhes adicionais sobre a ausência..."></textarea>
+                </div>
+
+                <div id="alertBox"></div>
+
+                <button class="btn-submit" id="btnEnviar" onclick="enviarJustificativa()">
+                    Enviar Justificativa
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        2026 · Farol de Presença · Desenvolvido por Leandro Machado — Vice Secretário de Caieiras
+    </footer>
+</div>
+
+<script>
+    const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    let cadastroPessoas = [];
+    let pessoaSelecionada = null;
+    let autocompleteIndex = -1;
+    let firebaseOk = false;
+    let reuniaoAtiva = null; // dados da reunião ativa carregada do Firebase
+
+    // ── Cores dos badges por tipo ─────────────────────────────
+    const TIPO_CORES = {
+        RMA:  { bg:'#f093fb', color:'#4a0050' },
+        RA:   { bg:'#4facfe', color:'#002a5e' },
+        RAEC: { bg:'#43e97b', color:'#003820' },
+        RMC:  { bg:'#f5a623', color:'#5a3200' }
+    };
+
+    // ── Formatar data "YYYY-MM-DD" → "dia por extenso, DD/MM/YYYY" ──
+    function formatarDataReuniao(str) {
+        if (!str) return '';
+        try {
+            const [y, m, d] = str.split('-');
+            return new Date(y, m-1, d).toLocaleDateString('pt-BR', {
+                weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'
+            });
+        } catch { return str; }
+    }
+
+    // ── Carregar reunião ativa e cadastro em paralelo ─────────
+    document.addEventListener('jfbReady', async () => {
+        const dot = document.getElementById('statusDot');
+        const txt = document.getElementById('statusTxt');
+        dot.style.background = '#f39c12';
+        txt.textContent = 'Carregando...';
+
+        try {
+            const [reuniao, pessoas] = await Promise.all([
+                window._jfb.carregarReuniaoAtiva(),
+                window._jfb.carregarCadastro()
+            ]);
+
+            cadastroPessoas = pessoas;
+            firebaseOk = true;
+            dot.style.background = '#27ae60';
+            txt.textContent = `✅ Conectado — ${pessoas.length} pessoa(s) no cadastro`;
+
+            aplicarReuniaoAtiva(reuniao);
+
+        } catch(e) {
+            dot.style.background = '#e74c3c';
+            txt.textContent = '❌ Erro ao carregar dados';
+        }
+    });
+
+    setTimeout(() => {
+        if (!window._jfbReady) {
+            document.getElementById('statusDot').style.background = '#e74c3c';
+            document.getElementById('statusTxt').textContent = '❌ Sem conexão com o servidor';
+        }
+    }, 6000);
+
+    // ── Aplicar reunião ativa na interface ────────────────────
+    function aplicarReuniaoAtiva(r) {
+        const loadingDot  = document.getElementById('reuniaoLoadingDot');
+        const badge       = document.getElementById('reuniaoAtivaBadge');
+        const semAtiva    = document.getElementById('reuniaoSemAtiva');
+        const texto       = document.getElementById('reuniaoAtivaTexto');
+        const desc        = document.getElementById('reuniaoAtivaDesc');
+        const tipoBadge   = document.getElementById('reuniaoAtivaTipoBadge');
+        const inputMes    = document.getElementById('inputMes');
+        const mesInfo     = document.getElementById('mesInfo');
+        const valorHidden = document.getElementById('reuniaoAtivaValor');
+
+        // Esconder spinner
+        loadingDot.style.display = 'none';
+
+        if (!r || !r.ativo) {
+            badge.style.display = 'none';
+            semAtiva.style.display = 'block';
+            reuniaoAtiva = null;
+            inputMes.value = '';
+            mesInfo.textContent = '';
+            return;
+        }
+
+        reuniaoAtiva = r;
+        const tipo = (r.tipo || '').toUpperCase();
+        const cores = TIPO_CORES[tipo] || { bg:'#ecf0f1', color:'#555' };
+
+        // Badge do tipo
+        tipoBadge.textContent = tipo;
+        tipoBadge.style.background = cores.bg;
+        tipoBadge.style.color = cores.color;
+        tipoBadge.style.display = 'inline-block';
+
+        // Textos
+        texto.textContent = r.descricao || tipo;
+        desc.textContent  = formatarDataReuniao(r.data);
+
+        // Preencher campo oculto e mês (agora read-only)
+        valorHidden.value = tipo.toLowerCase();
+        inputMes.value    = r.monthYear || '';
+        mesInfo.textContent = r.monthYear ? `Referência: ${r.monthYear}` : '';
+    }
+
+    // Autocomplete
+    function onNomeInput() {
+        pessoaSelecionada = null;
+        document.getElementById('inputCargo').value = '';
+        const val = document.getElementById('inputNome').value.trim().toLowerCase();
+        const list = document.getElementById('autocompleteList');
+        autocompleteIndex = -1;
+
+        if (val.length < 2) {
+            list.innerHTML = '';
+            list.classList.remove('open');
+            return;
+        }
+
+        const matches = cadastroPessoas.filter(p => p.nome.toLowerCase().includes(val)).slice(0, 8);
+
+        if (matches.length === 0) {
+            list.innerHTML = '<div class="autocomplete-item" style="color:#aaa; font-style:italic;">Nenhum nome encontrado</div>';
+            list.classList.add('open');
+            return;
+        }
+
+        list.innerHTML = matches.map((p, i) =>
+            `<div class="autocomplete-item" data-index="${i}" data-nome="${p.nome}" data-cargo="${p.cargo}"
+                onmousedown="selecionarPessoa('${p.nome.replace(/'/g,"\\'")}','${p.cargo.replace(/'/g,"\\'")}')">
+                <div class="nome">${p.nome}</div>
+                <div class="cargo">${p.cargo}</div>
+             </div>`
+        ).join('');
+        list.classList.add('open');
+    }
+
+    function onNomeKeydown(e) {
+        const list = document.getElementById('autocompleteList');
+        const items = list.querySelectorAll('.autocomplete-item');
+        if (!list.classList.contains('open') || items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            autocompleteIndex = Math.min(autocompleteIndex + 1, items.length - 1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            autocompleteIndex = Math.max(autocompleteIndex - 1, 0);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (autocompleteIndex >= 0) {
+                const item = items[autocompleteIndex];
+                selecionarPessoa(item.dataset.nome, item.dataset.cargo);
+            }
+            return;
+        } else if (e.key === 'Escape') {
+            fecharAutocomplete();
+            return;
+        }
+
+        items.forEach((it, i) => it.classList.toggle('selected', i === autocompleteIndex));
+    }
+
+    function selecionarPessoa(nome, cargo) {
+        pessoaSelecionada = { nome, cargo };
+        document.getElementById('inputNome').value = nome;
+        document.getElementById('inputCargo').value = cargo;
+        fecharAutocomplete();
+    }
+
+    function fecharAutocomplete() {
+        const list = document.getElementById('autocompleteList');
+        list.innerHTML = '';
+        list.classList.remove('open');
+        autocompleteIndex = -1;
+    }
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.autocomplete-wrap')) fecharAutocomplete();
+    });
+
+    // Enviar justificativa
+    async function enviarJustificativa() {
+        const alertBox = document.getElementById('alertBox');
+        alertBox.innerHTML = '';
+
+        const nome    = document.getElementById('inputNome').value.trim();
+        const cargo   = document.getElementById('inputCargo').value.trim();
+        const motivo  = document.querySelector('input[name="motivo"]:checked');
+        const obs     = document.getElementById('inputObs').value.trim();
+        const tipo    = document.getElementById('reuniaoAtivaValor').value;
+        const monthYear = reuniaoAtiva ? reuniaoAtiva.monthYear : '';
+
+        if (!nome) return showAlert('Por favor, informe o seu nome.', 'error');
+        if (!pessoaSelecionada || pessoaSelecionada.nome.toLowerCase() !== nome.toLowerCase()) {
+            return showAlert('⚠️ Selecione seu nome na lista de sugestões para garantir o preenchimento correto.', 'warning');
+        }
+        if (!tipo) return showAlert('Nenhuma reunião ativa no momento. Aguarde o responsável ativar uma reunião.', 'error');
+        if (!monthYear) return showAlert('Mês de referência não disponível. Verifique a reunião ativa.', 'error');
+        if (!motivo) return showAlert('Selecione o motivo da ausência.', 'error');
+        if (!firebaseOk) return showAlert('❌ Sem conexão com o servidor. Verifique sua internet e recarregue a página.', 'error');
+
+        const btn = document.getElementById('btnEnviar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+        try {
+            // Verificar duplicata
+            const duplicata = await window._jfb.verificarDuplicata(nome, monthYear, tipo);
+            if (duplicata) {
+                showAlert(`⚠️ Você já enviou uma justificativa para <strong>${monthYear}</strong> na reunião <strong>${tipo.toUpperCase()}</strong>. Caso precise atualizar, entre em contato com o responsável.`, 'warning');
+                btn.disabled = false;
+                btn.innerHTML = 'Enviar Justificativa';
+                return;
+            }
+
+            await window._jfb.salvarJustificativa({
+                nome: pessoaSelecionada.nome,
+                cargo: cargo,
+                tipo: tipo,
+                monthYear: monthYear,
+                motivo: motivo.value,
+                observacao: obs,
+                data: new Date().toLocaleDateString('pt-BR')
+            });
+
+            // Mostrar tela de sucesso
+            document.getElementById('successMsg').innerHTML =
+                `<strong>${pessoaSelecionada.nome}</strong> — ${motivo.value}<br>
+                 Reunião <strong>${tipo.toUpperCase()}</strong> · ${monthYear}`;
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'block';
+
+        } catch(e) {
+            showAlert('❌ Erro ao enviar: ' + e.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Enviar Justificativa';
+        }
+    }
+
+    function showAlert(msg, type) {
+        const alertBox = document.getElementById('alertBox');
+        alertBox.innerHTML = `<div class="alert ${type}">${msg}</div>`;
+    }
+
+    // Garantir que sempre abre na tela do formulário
+    window.addEventListener('load', () => {
+        document.getElementById('successScreen').style.display = 'none';
+        document.getElementById('formSection').style.display = 'block';
+    });
+
+    function novaJustificativa() {
+        document.getElementById('inputNome').value = '';
+        document.getElementById('inputCargo').value = '';
+        document.getElementById('inputObs').value = '';
+        document.getElementById('alertBox').innerHTML = '';
+        document.querySelectorAll('input[name="motivo"]').forEach(r => r.checked = false);
+        pessoaSelecionada = null;
+        const btn = document.getElementById('btnEnviar');
+        btn.disabled = false;
+        btn.innerHTML = 'Enviar Justificativa';
+        document.getElementById('successScreen').style.display = 'none';
+        document.getElementById('formSection').style.display = 'block';
+    }
+</script>
+</body>
+</html>
